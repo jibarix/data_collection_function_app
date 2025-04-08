@@ -8,3 +8,4 @@ azure-data-tables
 python-dotenv
 azure-identity
 azure-keyvault-secrets
+xlrd>=2.0.1

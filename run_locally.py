@@ -1,5 +1,15 @@
 # run_locally.py
 
+"""
+Run locally with:
+
+    export AZURE_STORAGE_CONNECTION_STRING="your-actual-connection-string"
+    python run_locally.py
+
+This script uses `dotenv` to load other environment variables from `.env`, 
+but assumes the AZURE_STORAGE_CONNECTION_STRING is already exported to the shell.
+"""
+
 import os
 import logging
 from dotenv import load_dotenv
