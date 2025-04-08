@@ -1,9 +1,10 @@
 """
 Configuration for all EDB data scrapers.
 """
+import os
 
-# Base URL for all data sources
-BASE_URL = "https://www.bde.pr.gov/BDE/PREDDOCS/"
+# Base URL from environment variable with fallback
+BASE_URL = os.getenv("EDB_BASE_URL", "https://www.bde.pr.gov/BDE/PREDDOCS/")
 
 # Common SQL template for creating monthly data tables
 MONTHLY_TABLE_SQL_TEMPLATE = """
@@ -236,6 +237,10 @@ SCRAPER_CONFIGS = {
         'type': 'monthly'
     }
 }
+
+# Add BASE_URL to each config
+for config in SCRAPER_CONFIGS.values():
+    config['url'] = BASE_URL
 
 # Define which tables need to be created (used in your local or Supabase setup)
 TABLES_TO_CREATE = [config['create_table_sql'] for config in SCRAPER_CONFIGS.values()]

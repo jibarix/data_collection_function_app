@@ -1,6 +1,7 @@
 # scraper/base_scraper.py
 
 import pandas as pd
+import logging
 from datetime import datetime
 from io import BytesIO
 import requests
@@ -33,7 +34,7 @@ class BaseEDBScraper:
             response.raise_for_status()
             return response.content
         except Exception as e:
-            print(f"Download error: {e}")
+            logging.error(f"Download error: {e}")
             return None
 
     def extract_data(self, excel_content: bytes, sheet_name: str, data_location: str) -> pd.DataFrame:
@@ -47,7 +48,7 @@ class BaseEDBScraper:
             end_col = ord(end_cell[0].upper()) - ord('A')
             return df.iloc[start_row:end_row + 1, start_col:end_col + 1]
         except Exception as e:
-            print(f"Extraction error: {e}")
+            logging.error(f"Extraction error: {e}")
             return None
 
     def update_last_run(self, dataset_name: str) -> None:

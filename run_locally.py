@@ -2,11 +2,18 @@
 
 import os
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from scraper.config import SCRAPER_CONFIGS
 from scraper.base_scraper import MonthlyDataScraper
 from scraper.azure_blob import upload_raw_data
 
-logging.basicConfig(level=logging.INFO)
+# Set up proper logging configuration
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def run_scrapers():
     for name, config in SCRAPER_CONFIGS.items():
@@ -24,7 +31,7 @@ def run_scrapers():
                 logging.error(f"Failed to download file for {name}")
                 continue
             
-            # Optionally upload raw data for local testing.
+            # Optionally upload raw data for local testing
             try:
                 upload_raw_data(content, config['file_name'])
                 logging.info(f"Uploaded raw data for {name}")

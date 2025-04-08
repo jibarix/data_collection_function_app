@@ -5,3 +5,4 @@ openpyxl
 azure-storage-blob
 python-dateutil
 azure-data-tables
+python-dotenv
