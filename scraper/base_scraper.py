@@ -38,15 +38,27 @@ class BaseEDBScraper:
             return None
 
     def extract_data(self, excel_content: bytes, sheet_name: str, data_location: str) -> pd.DataFrame:
-        """Extract a range of cells from an Excel file"""
         try:
+            # Try to read with sheet name first
             df = pd.read_excel(BytesIO(excel_content), sheet_name=sheet_name, header=None)
+            
+            # Extract cell range
             start_cell, end_cell = data_location.split(":")
             start_row = int(start_cell[1:]) - 1
             start_col = ord(start_cell[0].upper()) - ord('A')
             end_row = int(end_cell[1:]) - 1
             end_col = ord(end_cell[0].upper()) - ord('A')
+            
+            # Validate extraction boundaries
+            if start_row < 0 or start_col < 0 or end_row >= df.shape[0] or end_col >= df.shape[1]:
+                logging.error(f"Invalid data location: {data_location} for dataframe of shape {df.shape}")
+                return None
+                
             return df.iloc[start_row:end_row + 1, start_col:end_col + 1]
+        except ValueError as ve:
+            # Specific handling for sheet name errors
+            logging.error(f"Sheet '{sheet_name}' not found: {ve}")
+            return None
         except Exception as e:
             logging.error(f"Extraction error: {e}")
             return None

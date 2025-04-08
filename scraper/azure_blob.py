@@ -15,6 +15,23 @@ FINAL_DATA_CONNECTION_STRING = RAW_DATA_CONNECTION_STRING
 RAW_DATA_CONTAINER = "raw-data"       # Stores raw files downloaded from government sources
 FINAL_DATA_CONTAINER = "processed-data"  # Stores processed data (e.g., CSV format)
 
+def get_connection_string():
+    from azure.identity import DefaultAzureCredential
+    from azure.keyvault.secrets import SecretClient
+    
+    key_vault_name = os.getenv("KEY_VAULT_NAME", "pr-opendata-kv")
+    key_vault_uri = f"https://{key_vault_name}.vault.azure.net/"
+    secret_name = "Storage-Connection-String"
+    
+    try:
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=key_vault_uri, credential=credential)
+        return client.get_secret(secret_name).value
+    except Exception as e:
+        logging.error(f"Error retrieving connection string from Key Vault: {str(e)}")
+        # Fall back to environment variable
+        return os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+
 def upload_raw_data(content: bytes, blob_name: str):
     """Upload the raw Excel file to the designated raw data container."""
     blob_service_client = BlobServiceClient.from_connection_string(RAW_DATA_CONNECTION_STRING)
