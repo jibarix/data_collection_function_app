@@ -6,14 +6,12 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient
 
 # Connection strings—replace with secure values.
+# Both pointing to the same storage account, as per your structure
 RAW_DATA_CONNECTION_STRING = os.getenv(
-    "AZURE_RAW_DATA_CONNECTION_STRING",
-    "DefaultEndpointsProtocol=https;AccountName=propendata;AccountKey=<<RAW_KEY>>;EndpointSuffix=core.windows.net"
+    "AZURE_STORAGE_CONNECTION_STRING",
+    "DefaultEndpointsProtocol=https;AccountName=propendata;AccountKey=<<KEY>>;EndpointSuffix=core.windows.net"
 )
-FINAL_DATA_CONNECTION_STRING = os.getenv(
-    "AZURE_FINAL_DATA_CONNECTION_STRING",
-    "DefaultEndpointsProtocol=https;AccountName=propendata_dl;AccountKey=<<DL_KEY>>;EndpointSuffix=core.windows.net"
-)
+FINAL_DATA_CONNECTION_STRING = RAW_DATA_CONNECTION_STRING
 
 # Container names based on the guide.
 RAW_DATA_CONTAINER = "raw-data"       # Stores raw files downloaded from government sources.
