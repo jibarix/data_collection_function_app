@@ -1,0 +1,6 @@
+azure-functions
+pandas
+requests
+openpyxl
+azure-storage-blob
+python-dateutil
