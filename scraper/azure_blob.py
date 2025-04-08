@@ -9,7 +9,7 @@ from azure.storage.blob import BlobServiceClient
 # Both pointing to the same storage account, as per your structure
 RAW_DATA_CONNECTION_STRING = os.getenv(
     "AZURE_STORAGE_CONNECTION_STRING",
-    "DefaultEndpointsProtocol=https;AccountName=propendata;AccountKey=<<KEY>>;EndpointSuffix=core.windows.net"
+    ""  # Remove the hardcoded fallback
 )
 FINAL_DATA_CONNECTION_STRING = RAW_DATA_CONNECTION_STRING
 

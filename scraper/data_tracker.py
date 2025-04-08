@@ -22,7 +22,7 @@ def update_last_run(dataset_name: str, timestamp: str) -> None:
         "RowKey": dataset_name,
         "timestamp": timestamp
     }
-    table_client.upsert_entity(entity, mode=UpdateMode.REPLACE)
+    table_client.upsert_entity(entity, mode="replace")
 
 def get_last_run(dataset_name: str):
     table_client = _get_table_client()
