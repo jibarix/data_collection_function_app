@@ -1,10 +1,14 @@
 # function_app/HttpTriggerScraper/__init__.py
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import logging
 import azure.functions as func
 from scraper.config import SCRAPER_CONFIGS
 from scraper.base_scraper import MonthlyDataScraper
-from scraper.azure_blob import upload_raw_data
+from scraper.azure_blob import upload_raw_data, upload_final_data
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("pr-opendata-collector function triggered.")
@@ -21,23 +25,32 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 continue
             
             if scraper.should_update(name):
-                # Download the Excel file.
+                # Step 1: Download the Excel file.
                 content = scraper.download_excel(config['url'], config['file_name'])
                 if content is None:
                     logging.error(f"Failed to download Excel file for {name}.")
                     continue
                 
-                # Upload raw file to Azure Storage Account.
+                # Step 2: Upload the raw file to the "raw-data" container.
                 upload_raw_data(content, config['file_name'])
+                logging.info(f"Uploaded raw data for {name} to the 'raw-data' container.")
                 
-                # Extract, process, and upload final data.
+                # Step 3: Extract and process the data.
                 df = scraper.extract_data(content, config['sheet_name'], config['data_location'])
                 if df is None:
                     logging.error(f"Data extraction failed for {name}.")
                     continue
                 
                 processed = scraper.process_data(df)
+                
+                # Step 4: Insert (or store) the processed data in the target system.
                 scraper.insert_data(processed)
+                
+                # Step 5: Upload the processed data (as CSV) to the "processed-data" container.
+                upload_final_data(processed, config['table_name'])
+                logging.info(f"Uploaded processed data for {name} to the 'processed-data' container.")
+                
+                # Step 6: Update the metadata with the last run timestamp.
                 scraper.update_last_run(name)
                 logging.info(f"Scraper {name} processed and updated successfully.")
             else:

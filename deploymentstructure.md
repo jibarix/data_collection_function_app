@@ -1,4 +1,4 @@
-your-repo/
+data_collection_function_app/
 ├── run_locally.py (test only, not to be deployed; ignore)
 ├── function_app/
 │   ├── HttpTriggerScraper/

@@ -25,6 +25,10 @@ wheels/
 .env
 local.settings.json
 
+# Environments
+.venv
+.vscode
+
 # Local testing data
 local_raw/
 local_processed/
@@ -34,7 +38,7 @@ local.settings.json
 
 # IDE files
 .idea/
-.vscode/
+
 *.swp
 *.swo
 .DS_Store
@@ -42,3 +46,4 @@ local.settings.json
 # Logs
 logs/
 *.log
+
