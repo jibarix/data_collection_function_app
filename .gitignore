@@ -46,3 +46,6 @@ project.zip
 # Logs
 logs/
 *.log
+
+# Scripts
+recreate_function_app.sh

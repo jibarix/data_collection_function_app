@@ -58,7 +58,15 @@ az storage blob upload \
   --overwrite
 
 echo "🔐 Generating SAS token..."
-EXPIRY=$(date -u -v+1d '+%Y-%m-%dT%H:%MZ')
+# Cross-platform date generation (works on both macOS and Linux)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS date command
+  EXPIRY=$(date -u -v+1d '+%Y-%m-%dT%H:%MZ')
+else
+  # Linux date command
+  EXPIRY=$(date -u -d "tomorrow" '+%Y-%m-%dT%H:%MZ')
+fi
+
 SAS=$(az storage blob generate-sas \
   --account-name $STORAGE_ACCOUNT \
   --account-key "$STORAGE_KEY" \
@@ -74,6 +82,18 @@ echo "🔧 Setting WEBSITE_RUN_FROM_PACKAGE..."
 az rest --method PUT \
   --uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$FUNCTION_APP/config/appsettings?api-version=2022-03-01" \
   --body "{\"properties\": {\"WEBSITE_RUN_FROM_PACKAGE\": \"$ZIP_URL\"}}"
+
+echo "🔧 Updating function app settings for Python runtime..."
+az functionapp config appsettings set \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --settings "SCM_DO_BUILD_DURING_DEPLOYMENT=true" "FUNCTIONS_WORKER_RUNTIME=python" "FUNCTIONS_EXTENSION_VERSION=~4"
+
+echo "🔧 Setting Linux runtime to Python 3.11..."
+az functionapp config set \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --linux-fx-version "Python|3.11"
 
 echo "🔄 Restarting function app..."
 az functionapp restart \
