@@ -70,6 +70,23 @@ az functionapp create \
   --app-insights $APP_INSIGHTS \
   --os-type Linux
 
+# Add CORS configuration for the Azure Portal
+echo "🌐 Configuring CORS settings for portal testing..."
+az functionapp cors add \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --allowed-origins "https://portal.azure.com" "https://functions.azure.com"
+
+# Configure network access - allow from Azure Portal
+echo "🔌 Configuring network access to allow Azure Portal..."
+az functionapp config access-restriction add \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --rule-name "AllowAzurePortal" \
+  --action Allow \
+  --priority 100 \
+  --service-tag AzureCloud
+
 # Configure the Function App settings
 echo "🔧 Configuring Function App settings..."
 
