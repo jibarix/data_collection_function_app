@@ -3,11 +3,10 @@
 """
 Run locally with:
 
-    export AZURE_STORAGE_CONNECTION_STRING="your-actual-connection-string"
     python run_locally.py
 
-This script uses `dotenv` to load other environment variables from `.env`, 
-but assumes the AZURE_STORAGE_CONNECTION_STRING is already exported to the shell.
+This script uses `dotenv` to load environment variables from `.env`, 
+including the AZURE_STORAGE_CONNECTION_STRING.
 """
 
 import os
@@ -16,6 +15,13 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Verify connection string is available
+if not os.getenv("AZURE_STORAGE_CONNECTION_STRING"):
+    logging.error("AZURE_STORAGE_CONNECTION_STRING not found in environment or .env file")
+    print("ERROR: AZURE_STORAGE_CONNECTION_STRING not found in environment or .env file")
+    print("Please add it to your .env file and try again")
+    exit(1)
 
 from scraper.config import SCRAPER_CONFIGS
 from scraper.base_scraper import MonthlyDataScraper
