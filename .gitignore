@@ -23,7 +23,6 @@ wheels/
 
 # Environment variables
 .env
-local.settings.json
 
 # Environments
 .venv
@@ -42,8 +41,11 @@ local.settings.json
 *.swp
 *.swo
 .DS_Store
+project.zip
 
 # Logs
 logs/
 *.log
 
+# Deployment script
+deploy.sh
