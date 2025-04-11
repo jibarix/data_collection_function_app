@@ -18,6 +18,7 @@ STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT:-propendata}"
 CONTAINER_NAME="${AZURE_FUNCTION_CONTAINER:-function-packages}"
 ZIP_NAME="${AZURE_FUNCTION_ZIP:-project.zip}"
 SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
+KEY_VAULT="${AZURE_KEY_VAULT:-pr-opendata-kv}"
 
 # Validate required variables
 if [ -z "$SUBSCRIPTION_ID" ]; then
@@ -78,16 +79,25 @@ SAS=$(az storage blob generate-sas \
 
 ZIP_URL="https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}/${ZIP_NAME}?${SAS}"
 
-echo "🔧 Setting WEBSITE_RUN_FROM_PACKAGE..."
-az rest --method PUT \
-  --uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$FUNCTION_APP/config/appsettings?api-version=2022-03-01" \
-  --body "{\"properties\": {\"WEBSITE_RUN_FROM_PACKAGE\": \"$ZIP_URL\"}}"
+# Get the storage connection string for environment variables
+echo "🔧 Getting storage connection string..."
+STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
+  --name $STORAGE_ACCOUNT \
+  --resource-group $RESOURCE_GROUP \
+  --query connectionString \
+  --output tsv)
 
-echo "🔧 Updating function app settings for Python runtime..."
+echo "🔧 Setting required environment variables..."
 az functionapp config appsettings set \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
-  --settings "SCM_DO_BUILD_DURING_DEPLOYMENT=true" "FUNCTIONS_WORKER_RUNTIME=python" "FUNCTIONS_EXTENSION_VERSION=~4"
+  --settings \
+  "AZURE_STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION_STRING" \
+  "KEY_VAULT_NAME=$KEY_VAULT" \
+  "WEBSITE_RUN_FROM_PACKAGE=$ZIP_URL" \
+  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
+  "FUNCTIONS_WORKER_RUNTIME=python" \
+  "FUNCTIONS_EXTENSION_VERSION=~4"
 
 echo "🔧 Setting Linux runtime to Python 3.11..."
 az functionapp config set \
