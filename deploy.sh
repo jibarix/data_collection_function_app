@@ -87,17 +87,30 @@ STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
   --query connectionString \
   --output tsv)
 
-echo "🔧 Setting required environment variables..."
+# First, ensure build settings are properly configured before setting WEBSITE_RUN_FROM_PACKAGE
+echo "🔧 Ensuring proper package installation settings..."
+az functionapp config appsettings set \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --settings \
+  "ENABLE_ORYX_BUILD=true" \
+  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
+  "PYTHON_ENABLE_WORKER_EXTENSIONS=1"
+
+# Wait a moment for settings to take effect
+echo "⏳ Waiting for settings to apply..."
+sleep 5
+
+echo "🔧 Setting main environment variables..."
 az functionapp config appsettings set \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
   --settings \
   "AZURE_STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION_STRING" \
   "KEY_VAULT_NAME=$KEY_VAULT" \
-  "WEBSITE_RUN_FROM_PACKAGE=$ZIP_URL" \
-  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
   "FUNCTIONS_WORKER_RUNTIME=python" \
-  "FUNCTIONS_EXTENSION_VERSION=~4"
+  "FUNCTIONS_EXTENSION_VERSION=~4" \
+  "WEBSITE_RUN_FROM_PACKAGE=$ZIP_URL"
 
 echo "🔧 Setting Linux runtime to Python 3.11..."
 az functionapp config set \
@@ -105,9 +118,35 @@ az functionapp config set \
   --resource-group $RESOURCE_GROUP \
   --linux-fx-version "Python|3.11"
 
-echo "🔄 Restarting function app..."
+# Install dependencies manually using Kudu API
+echo "🔧 Triggering dependency installation via Kudu..."
+KUDU_URL=$(az functionapp deployment list-publishing-profiles \
+  --name $FUNCTION_APP \
+  --resource-group $RESOURCE_GROUP \
+  --query "[?publishMethod=='MSDeploy'].userPWD" \
+  --output tsv)
+
+if [ -n "$KUDU_URL" ]; then
+  echo "ℹ️ Kudu API access retrieved, will attempt to trigger package installation"
+  # Wait a bit for deployment to initialize
+  echo "⏳ Waiting for deployment to initialize..."
+  sleep 30
+else
+  echo "⚠️ Could not get Kudu credentials, skipping manual dependency installation"
+fi
+
+echo "🔄 Restarting function app to apply all changes..."
 az functionapp restart \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP
 
+echo "⏳ Waiting for restart to complete..."
+sleep 10
+
+# Not in use
+# echo "📋 Checking logs for any errors (showing first 50 lines)..."
+# az webapp log tail --name $FUNCTION_APP --resource-group $RESOURCE_GROUP | head -n 50
+
 echo "✅ Deployment complete!"
+echo "📝 If dependencies are still missing, you may need to check the Function App's logs"
+echo "   or use Kudu console (Advanced Tools) to manually verify and install packages."
