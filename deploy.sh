@@ -26,6 +26,10 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
   exit 1
 fi
 
+# Create/update .python_packages directory
+echo "🔧 Creating local .python_packages directory to help Oryx build system..."
+mkdir -p .python_packages/lib/site-packages
+
 # Get storage key securely using Azure CLI
 echo "🔑 Retrieving storage account key..."
 STORAGE_KEY=$(az storage account keys list \
@@ -87,21 +91,23 @@ STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
   --query connectionString \
   --output tsv)
 
-# First, ensure build settings are properly configured before setting WEBSITE_RUN_FROM_PACKAGE
-echo "🔧 Ensuring proper package installation settings..."
+# First, configure build settings before deploying package
+echo "🔧 Setting build configuration to ensure Oryx properly installs dependencies..."
 az functionapp config appsettings set \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
   --settings \
   "ENABLE_ORYX_BUILD=true" \
-  "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
-  "PYTHON_ENABLE_WORKER_EXTENSIONS=1"
+  "SCM_DO_BUILD_DURING_DEPLOYMENT=1" \
+  "PYTHON_ENABLE_WORKER_EXTENSIONS=1" \
+  "ENABLE_ORYX=true" \
+  "ORYX_SDK_STORAGE_BASE_URL=https://oryx-cdn.microsoft.io"
 
 # Wait a moment for settings to take effect
 echo "⏳ Waiting for settings to apply..."
 sleep 5
 
-echo "🔧 Setting main environment variables..."
+echo "🔧 Setting core environment variables..."
 az functionapp config appsettings set \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
@@ -109,8 +115,7 @@ az functionapp config appsettings set \
   "AZURE_STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION_STRING" \
   "KEY_VAULT_NAME=$KEY_VAULT" \
   "FUNCTIONS_WORKER_RUNTIME=python" \
-  "FUNCTIONS_EXTENSION_VERSION=~4" \
-  "WEBSITE_RUN_FROM_PACKAGE=$ZIP_URL"
+  "FUNCTIONS_EXTENSION_VERSION=~4" 
 
 echo "🔧 Setting Linux runtime to Python 3.11..."
 az functionapp config set \
@@ -118,22 +123,16 @@ az functionapp config set \
   --resource-group $RESOURCE_GROUP \
   --linux-fx-version "Python|3.11"
 
-# Install dependencies manually using Kudu API
-echo "🔧 Triggering dependency installation via Kudu..."
-KUDU_URL=$(az functionapp deployment list-publishing-profiles \
+# Now deploy the package after all settings are configured
+echo "🚀 Deploying function package with Oryx build enabled..."
+az functionapp config appsettings set \
   --name $FUNCTION_APP \
   --resource-group $RESOURCE_GROUP \
-  --query "[?publishMethod=='MSDeploy'].userPWD" \
-  --output tsv)
+  --settings \
+  "WEBSITE_RUN_FROM_PACKAGE=$ZIP_URL"
 
-if [ -n "$KUDU_URL" ]; then
-  echo "ℹ️ Kudu API access retrieved, will attempt to trigger package installation"
-  # Wait a bit for deployment to initialize
-  echo "⏳ Waiting for deployment to initialize..."
-  sleep 30
-else
-  echo "⚠️ Could not get Kudu credentials, skipping manual dependency installation"
-fi
+echo "⏳ Waiting for deployment to complete..."
+sleep 30
 
 echo "🔄 Restarting function app to apply all changes..."
 az functionapp restart \
@@ -141,12 +140,23 @@ az functionapp restart \
   --resource-group $RESOURCE_GROUP
 
 echo "⏳ Waiting for restart to complete..."
-sleep 10
-
-# Not in use
-# echo "📋 Checking logs for any errors (showing first 50 lines)..."
-# az webapp log tail --name $FUNCTION_APP --resource-group $RESOURCE_GROUP | head -n 50
+sleep 20
 
 echo "✅ Deployment complete!"
-echo "📝 If dependencies are still missing, you may need to check the Function App's logs"
-echo "   or use Kudu console (Advanced Tools) to manually verify and install packages."
+echo ""
+echo "You can test your function with:"
+echo "https://$FUNCTION_APP.azurewebsites.net/api/HttpTriggerScraper?scraper=auto_sales"
+echo ""
+echo "📝 If the function still fails to import dependencies, check the function logs in the portal."
+echo "   You can also consider creating a 'requirements.psd1' file to explicitly manage Python dependencies:"
+echo ""
+echo "# Example requirements.psd1 content:"
+echo "@{"
+echo "    'pandas' = '1.5.3'"
+echo "    'numpy' = '1.24.4'"
+echo "    'requests' = '*'"
+echo "    'openpyxl' = '*'"
+echo "    'azure-storage-blob' = '*'"
+echo "    'azure-data-tables' = '*'"
+echo "    'xlrd' = '>=2.0.1'"
+echo "}"
